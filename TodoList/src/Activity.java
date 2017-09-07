@@ -8,6 +8,11 @@ public class Activity {
 		this.name = n;
 	}
 	
+	public Activity(String n, int t) {
+		this.time = t;
+		this.name = n;
+	}
+	
 	public int getTime() {
 		return this.time;
 	}

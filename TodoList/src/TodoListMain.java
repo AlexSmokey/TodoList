@@ -3,11 +3,15 @@ import java.awt.Component;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.util.ArrayList;
 
 import javax.swing.JButton;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
@@ -17,6 +21,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 public class TodoListMain implements Runnable{
 
@@ -159,34 +164,12 @@ public class TodoListMain implements Runnable{
 				
 				if(choice == JOptionPane.YES_OPTION) {
 					if (save()) {
-						activities.clear();
-						main = null;
-						timer.stop();
-						pauseButton.setText("START");
-						activity.setText("CHOOSE AN ACTIVITY FROM ACTIVITY TAB\n\n");
-						time.setText("---");
-						Component[] options = activityMenu.getMenuComponents();
-						for (int i = 0; i < options.length; i++) {
-							if (!options[i].equals(newActivityMenuItem)) {
-								activityMenu.remove(options[i]);
-							}
-						}
+						clear();
 					} else {
 						JOptionPane.showMessageDialog(null, "Data was not saved!", "Warning!", JOptionPane.INFORMATION_MESSAGE);
 					}
 				} else if (choice == JOptionPane.NO_OPTION) {
-					activities.clear();
-					main = null;
-					timer.stop();
-					pauseButton.setText("START");
-					activity.setText("CHOOSE AN ACTIVITY FROM ACTIVITY TAB\n\n");
-					time.setText("---");
-					Component[] options = activityMenu.getMenuComponents();
-					for (int i = 0; i < options.length; i++) {
-						if (!options[i].equals(newActivityMenuItem)) {
-							activityMenu.remove(options[i]);
-						}
-					}
+					clear();
 				} 
 			}
 			
@@ -262,16 +245,25 @@ public class TodoListMain implements Runnable{
 	}
 	
 	public boolean save() {
-		String fileName = JOptionPane.showInputDialog("What would you like to name your activity list?");
+		File file;
 		String str = "";
 		for (int i = 0; i < activities.size(); i++) {
 			str = str + activities.get(i).getName() +":" + activities.get(i).getTime() + "\n";
 		}
 	    BufferedWriter writer;
 		try {
-			writer = new BufferedWriter(new FileWriter(fileName));
+
+			JFileChooser chooser = new JFileChooser();
+	        FileNameExtensionFilter filter = new FileNameExtensionFilter("TODO List files", "todo");
+	        chooser.setFileFilter(filter);
+	        int test = chooser.showSaveDialog(null);
+	        if (test != JFileChooser.APPROVE_OPTION)
+	        	return false;
+	        file = chooser.getSelectedFile();
+	        writer = new BufferedWriter(new FileWriter(file.getAbsolutePath() + ".todo"));
 			writer.write(str);
 		    writer.close();
+		    System.out.println("DONE");
 		} catch (Exception e) {
 			return false;
 		}
@@ -279,7 +271,69 @@ public class TodoListMain implements Runnable{
 
 	}
 	public void open() {
-		//TODO
+		int choice = JOptionPane.showConfirmDialog(myFrame, "Would you like to save first?");
+		if (choice == JOptionPane.YES_OPTION) {
+			if (!save()) {
+				JOptionPane.showMessageDialog(null, "Data was not saved!", "Warning!", JOptionPane.INFORMATION_MESSAGE);
+				return;
+			}
+		}
+				
+		if(choice == JOptionPane.NO_OPTION || choice == JOptionPane.YES_OPTION) {
+			JFileChooser chooser = new JFileChooser();
+	        FileNameExtensionFilter filter = new FileNameExtensionFilter("TODO List files", "todo");
+	        chooser.setFileFilter(filter);
+	        int returnVal = chooser.showOpenDialog(null);
+	        if(returnVal == JFileChooser.APPROVE_OPTION) {
+	        	clear();
+	        	try {
+
+	                BufferedReader b = new BufferedReader(new FileReader(chooser.getSelectedFile()));
+	                String readLine = "";
+	                String name;
+
+	                while ((readLine = b.readLine()) != null) {
+	                	name = readLine.substring(0, readLine.indexOf(":"));
+	                	Activity tempAct = new Activity(name, Integer.parseInt(readLine.substring(readLine.indexOf(":") + 1)));
+	                    activities.add(tempAct);
+	                    JMenuItem temp = new JMenuItem(name);
+	    				temp.addActionListener(new ActionListener() {
+	    					@Override
+	    					public void actionPerformed(ActionEvent e) {
+	    						main = tempAct;
+	    						activity.setText(tempAct.getName());
+	    						time.setText(tempAct.getTime() + " seconds");
+	    						if (!timer.isRunning()) {
+	    							timer.start();
+	    							pauseButton.setText("PAUSE");
+	    						}
+	    					}
+	    					
+	    				});
+	    				activityMenu.add(temp);
+	                }
+	                b.close();
+
+	            } catch (Exception e) {
+	            	JOptionPane.showMessageDialog(null, "Invalid File", "Warning!", JOptionPane.INFORMATION_MESSAGE);
+	            }
+	        }
+		} 
+	}
+	
+	public void clear() {
+		activities.clear();
+		main = null;
+		timer.stop();
+		pauseButton.setText("START");
+		activity.setText("CHOOSE AN ACTIVITY FROM ACTIVITY TAB\n\n");
+		time.setText("---");
+		Component[] options = activityMenu.getMenuComponents();
+		for (int i = 0; i < options.length; i++) {
+			if (!options[i].equals(newActivityMenuItem)) {
+				activityMenu.remove(options[i]);
+			}
+		}
 	}
 
 }
